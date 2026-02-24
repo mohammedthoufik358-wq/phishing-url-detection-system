@@ -2,193 +2,91 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Suspicious URL Scanner</title>
-
     <style>
         body {
-            margin: 0;
-            font-family: 'Courier New', monospace;
-            background: black;
-            color: #00ff9d;
-            overflow: hidden;
-        }
-
-        canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 0;
-        }
-
-        .container {
-            position: relative;
-            z-index: 1;
-            width: 600px;
-            margin: 80px auto;
-            padding: 40px;
-            background: rgba(0,0,0,0.9);
-            border: 1px solid #00ff9d;
-            border-radius: 15px;
-            box-shadow: 0 0 25px #00ff9d;
+            font-family: Arial;
+            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+            color: white;
             text-align: center;
-        }
-
-        h2 {
-            margin-bottom: 30px;
-            letter-spacing: 3px;
+            padding: 50px;
         }
 
         input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #00ff9d;
-            background: black;
-            color: #00ff9d;
-            border-radius: 6px;
+            width: 400px;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
         }
 
         button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 20px;
-            background: #00ff9d;
-            color: black;
+            padding: 10px 20px;
             border: none;
-            border-radius: 6px;
+            border-radius: 5px;
+            background-color: #00c6ff;
+            color: black;
             font-weight: bold;
             cursor: pointer;
         }
 
-        button:hover {
-            background: black;
-            color: #00ff9d;
-            border: 1px solid #00ff9d;
-        }
-
-        .result-box {
-            margin-top: 25px;
+        .card {
+            background: rgba(255,255,255,0.1);
             padding: 20px;
-            border: 1px solid #00ff9d;
+            margin-top: 30px;
             border-radius: 10px;
-            box-shadow: 0 0 15px #00ff9d;
         }
 
-        .risk-bar {
-            width: 100%;
+        .low { color: #00ff99; }
+        .medium { color: #ffcc00; }
+        .high { color: #ff4d4d; }
+
+        .progress {
+            width: 80%;
+            background: #555;
+            margin: 10px auto;
+            border-radius: 10px;
+        }
+
+        .progress-bar {
             height: 20px;
-            background: #111;
-            border: 1px solid #00ff9d;
-            margin-top: 10px;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .risk-fill {
-            height: 100%;
-            width: 0%;
-            background: red;
-            transition: width 1s ease-in-out;
-        }
-
-        .timestamp {
-            margin-top: 15px;
-            font-size: 12px;
-            color: #00ff9d88;
+            border-radius: 10px;
         }
     </style>
 </head>
-
 <body>
 
-<canvas id="matrix"></canvas>
+<h1>🔐 Suspicious URL Scanner</h1>
 
-<div class="container">
-    <h2>⚡ suspicious url scanner ⚡</h2>
+<form method="post" action="/scan">
+    <input type="text" name="url" placeholder="Enter URL to scan..." required>
+    <button type="submit">Scan</button>
+</form>
 
-    <form action="/check" method="get">
-        <input type="text" name="url" placeholder="Enter target URL..." required>
-        <button type="submit">INITIATE SCAN</button>
-    </form>
+<div th:if="${riskScore != null}" class="card">
 
-    <div class="result-box" th:if="${result}">
-        <h3>Scan Result:</h3>
-        <p th:text="${result}"></p>
+    <h2>Scan Result</h2>
 
-        <div class="risk-bar">
-            <div class="risk-fill" id="riskFill"></div>
-        </div>
+    <h3 th:text="'Risk Score: ' + ${riskScore} + '%'"></h3>
 
-        <div class="timestamp">
-            Scan Time: <span id="time"></span>
+    <div class="progress">
+        <div class="progress-bar"
+             th:style="'width:' + ${riskScore} + '%; background-color:' +
+             (${level}=='HIGH' ? '#ff4d4d' :
+             (${level}=='MEDIUM' ? '#ffcc00' : '#00ff99'))">
         </div>
     </div>
+
+    <h3 th:text="'Risk Level: ' + ${level}"
+        th:class="${level.toLowerCase()}"></h3>
+
+    <h4>Detailed Report:</h4>
+    <ul>
+        <li th:each="entry : ${report}">
+            <b th:text="${entry.key}"></b> :
+            <span th:text="${entry.value}"></span>
+        </li>
+    </ul>
+
 </div>
-
-<script>
-    // Matrix Rain Effect
-    const canvas = document.getElementById("matrix");
-    const ctx = canvas.getContext("2d");
-
-    canvas.height = window.innerHeight;
-    canvas.width = window.innerWidth;
-
-    const letters = "01ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const fontSize = 14;
-    const columns = canvas.width / fontSize;
-    const drops = [];
-
-    for (let x = 0; x < columns; x++)
-        drops[x] = 1;
-
-    function draw() {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#00ff9d";
-        ctx.font = fontSize + "px monospace";
-
-        for (let i = 0; i < drops.length; i++) {
-            const text = letters[Math.floor(Math.random() * letters.length)];
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975)
-                drops[i] = 0;
-
-            drops[i]++;
-        }
-    }
-
-    setInterval(draw, 35);
-
-    // Risk bar simulation
-    const resultText = document.querySelector(".result-box p");
-    const riskFill = document.getElementById("riskFill");
-
-    if (resultText) {
-        let risk = 30;
-
-        if (resultText.innerText.includes("Safe")) {
-            risk = 20;
-            riskFill.style.background = "#00ff9d";
-        } else if (resultText.innerText.includes("Medium")) {
-            risk = 60;
-            riskFill.style.background = "#ffcc00";
-        } else {
-            risk = 90;
-            riskFill.style.background = "#ff0033";
-        }
-
-        setTimeout(() => {
-            riskFill.style.width = risk + "%";
-        }, 500);
-    }
-
-    // Timestamp
-    const now = new Date();
-    const time = document.getElementById("time");
-    if (time) {
-        time.innerText = now.toLocaleString();
-    }
-</script>
 
 </body>
 </html>
