@@ -2,13 +2,32 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Suspicious URL Scanner</title>
+
     <style>
         body {
-            font-family: Arial;
-            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-            color: white;
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            font-family: Consolas, monospace;
+            color: #00ff00;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .container {
             text-align: center;
-            padding: 50px;
+            margin-top: 100px;
+        }
+
+        h1 {
+            font-size: 40px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px #00ff00;
         }
 
         input {
@@ -16,33 +35,37 @@
             padding: 10px;
             border-radius: 5px;
             border: none;
+            outline: none;
+            font-size: 14px;
         }
 
         button {
             padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            background-color: #00c6ff;
+            background: #00ff00;
             color: black;
+            border: none;
             font-weight: bold;
             cursor: pointer;
+            border-radius: 5px;
         }
 
         .card {
-            background: rgba(255,255,255,0.1);
+            background: rgba(0, 0, 0, 0.8);
             padding: 20px;
-            margin-top: 30px;
+            margin: 30px auto;
+            width: 60%;
+            border: 1px solid #00ff00;
             border-radius: 10px;
         }
 
-        .low { color: #00ff99; }
-        .medium { color: #ffcc00; }
-        .high { color: #ff4d4d; }
+        .low { color: #00ff00; }
+        .medium { color: yellow; }
+        .high { color: red; }
 
         .progress {
             width: 80%;
-            background: #555;
-            margin: 10px auto;
+            background: #222;
+            margin: 15px auto;
             border-radius: 10px;
         }
 
@@ -50,43 +73,90 @@
             height: 20px;
             border-radius: 10px;
         }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
     </style>
 </head>
+
 <body>
 
-<h1>🔐 Suspicious URL Scanner</h1>
+<canvas id="matrix"></canvas>
 
-<form method="post" action="/scan">
-    <input type="text" name="url" placeholder="Enter URL to scan..." required>
-    <button type="submit">Scan</button>
-</form>
+<div class="container">
+    <h1>☠ Suspicious URL Scanner ☠</h1>
 
-<div th:if="${riskScore != null}" class="card">
+    <form method="post" action="/scan">
+        <input type="text" name="url" placeholder="Enter URL to scan..." required>
+        <button type="submit">Scan</button>
+    </form>
 
-    <h2>Scan Result</h2>
+    <div th:if="${riskScore != null}" class="card">
 
-    <h3 th:text="'Risk Score: ' + ${riskScore} + '%'"></h3>
+        <h2>Scan Result</h2>
 
-    <div class="progress">
-        <div class="progress-bar"
-             th:style="'width:' + ${riskScore} + '%; background-color:' +
-             (${level}=='HIGH' ? '#ff4d4d' :
-             (${level}=='MEDIUM' ? '#ffcc00' : '#00ff99'))">
+        <h3 th:text="'Risk Score: ' + ${riskScore} + '%'"></h3>
+
+        <div class="progress">
+            <div class="progress-bar"
+                 th:style="'width:' + ${riskScore} + '%; background-color:' +
+                 (${level}=='HIGH' ? 'red' :
+                 (${level}=='MEDIUM' ? 'yellow' : '#00ff00'))">
+            </div>
         </div>
+
+        <h3 th:text="'Risk Level: ' + ${level}"
+            th:class="${level.toLowerCase()}"></h3>
+
+        <h4>Detailed Report:</h4>
+
+        <ul>
+            <li th:each="entry : ${report}">
+                <b th:text="${entry.key}"></b> :
+                <span th:text="${entry.value}"></span>
+            </li>
+        </ul>
+
     </div>
-
-    <h3 th:text="'Risk Level: ' + ${level}"
-        th:class="${level.toLowerCase()}"></h3>
-
-    <h4>Detailed Report:</h4>
-    <ul>
-        <li th:each="entry : ${report}">
-            <b th:text="${entry.key}"></b> :
-            <span th:text="${entry.value}"></span>
-        </li>
-    </ul>
-
 </div>
+
+<script>
+    const canvas = document.getElementById("matrix");
+    const ctx = canvas.getContext("2d");
+
+    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+
+    const letters = "01";
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
+    const drops = [];
+
+    for (let x = 0; x < columns; x++)
+        drops[x] = 1;
+
+    function draw() {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#00ff00";
+        ctx.font = fontSize + "px monospace";
+
+        for (let i = 0; i < drops.length; i++) {
+            const text = letters.charAt(Math.floor(Math.random() * letters.length));
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975)
+                drops[i] = 0;
+
+            drops[i]++;
+        }
+    }
+
+    setInterval(draw, 35);
+</script>
 
 </body>
 </html>
