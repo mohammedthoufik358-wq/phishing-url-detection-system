@@ -41,3 +41,11 @@ Based on these features, a risk score is calculated and classification is perfor
 ---
 
 ## 💻 Project Structure
+
+## 📸 Screenshots
+
+### 🏠 Homepage
+![Homepage](homepage.png)
+
+### 🔎 Result Page
+![Result](result.png)
