@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,29 +17,28 @@
 
         body{
             background:#000;
-            height:100vh;
-            overflow:hidden;
+            min-height:100vh;
+            overflow-y:auto;
             display:flex;
             justify-content:center;
-            align-items:center;
+            align-items:flex-start;
+            padding:40px 0;
             color:#00ffcc;
         }
 
-        /* MATRIX BACKGROUND */
         canvas{
-            position:absolute;
+            position:fixed;
             top:0;
             left:0;
             z-index:-1;
         }
 
-        /* MAIN WRAPPER */
         .wrapper{
-            width:900px;
+            width:90%;
+            max-width:900px;
             text-align:center;
         }
 
-        /* TITLE */
         .title{
             font-size:48px;
             color:#00ffcc;
@@ -47,16 +46,23 @@
             margin-bottom:30px;
         }
 
-        /* INPUT SECTION */
         .input-section{
             display:flex;
             justify-content:center;
-            gap:10px;
             margin-bottom:40px;
         }
 
+        form{
+            display:flex;
+            width:100%;
+            justify-content:center;
+            gap:10px;
+            flex-wrap:wrap;
+        }
+
         input{
-            width:600px;
+            width:100%;
+            max-width:600px;
             padding:14px;
             border-radius:8px;
             border:2px solid #00ff99;
@@ -86,7 +92,6 @@
             box-shadow:0 0 20px #00ff99;
         }
 
-        /* RESULT CARD */
         .result-card{
             padding:40px;
             border-radius:20px;
@@ -95,9 +100,9 @@
             box-shadow:
                 0 0 10px #00ff99,
                 0 0 40px rgba(0,255,153,0.6);
+            margin-bottom:40px;
         }
 
-        /* RESULT TITLE */
         .result-title{
             font-size:32px;
             margin-bottom:20px;
@@ -105,13 +110,11 @@
             text-shadow:0 0 10px #00ffcc;
         }
 
-        /* RISK SCORE */
         .risk-score{
             margin:10px 0 20px 0;
             font-size:18px;
         }
 
-        /* PROGRESS BAR */
         .progress-container{
             width:100%;
             height:25px;
@@ -123,21 +126,27 @@
 
         .progress-bar{
             height:100%;
-            width:20%;
+            width:0%;
             background:#00ff99;
             border-radius:20px;
             transition:0.4s ease;
         }
 
-        /* DETAILS */
         .details{
             line-height:1.8;
             font-size:18px;
+            word-wrap:break-word;
         }
 
         .low{ color:#00ff99; }
         .medium{ color:orange; }
         .high{ color:red; }
+
+        @media(max-width:768px){
+            .title{
+                font-size:32px;
+            }
+        }
 
     </style>
 </head>
@@ -152,47 +161,64 @@
     </div>
 
     <div class="input-section">
-        <input type="text" placeholder="Enter URL to scan...">
-        <button onclick="runScan()">Scan</button>
+        <form action="/scan" method="post">
+            <input type="text" name="url" placeholder="Enter URL to scan..." th:value="${inputUrl}">
+            <button type="submit">Scan</button>
+        </form>
     </div>
 
-    <div class="result-card">
+    <div class="result-card" th:if="${riskScore != null}">
         <div class="result-title">Scan Result</div>
-        <div class="risk-score">Risk Score: <span id="score">20%</span></div>
+
+        <div class="risk-score">
+            Risk Score: <span id="score" th:text="${riskScore} + '%'">0%</span>
+        </div>
 
         <div class="progress-container">
-            <div class="progress-bar" id="progress"></div>
+            <div class="progress-bar" id="progress"
+                 th:style="'width:' + ${riskScore} + '%'"></div>
         </div>
 
         <div class="details">
-            <div>Risk Level: <span class="low" id="riskLevel">LOW</span></div>
+            <div>
+                Risk Level:
+                <span id="riskLevel"
+                      th:text="${level}"
+                      th:classappend="${level.toLowerCase()}">LOW</span>
+            </div>
             <br>
             <div><strong>Detailed Report:</strong></div>
-            <div>URL Length : Normal</div>
-            <div>HTTPS : Not Secure (HTTP)</div>
-            <div>IP Address Usage : Domain Used</div>
-            <div>Suspicious Keyword : None</div>
-            <div>Subdomain Check : Normal</div>
+            <div th:each="entry : ${report}">
+                <span th:text="${entry.key} + ' : ' + ${entry.value}"></span>
+            </div>
         </div>
     </div>
 
 </div>
 
 <script>
-    /* MATRIX EFFECT */
     const canvas = document.getElementById("matrix");
     const ctx = canvas.getContext("2d");
 
-    canvas.height = window.innerHeight;
-    canvas.width = window.innerWidth;
+    function resizeCanvas(){
+        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth;
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
 
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const fontSize = 14;
-    const columns = canvas.width / fontSize;
-    const drops = [];
+    let columns = canvas.width / fontSize;
+    let drops = [];
 
-    for(let x=0;x<columns;x++)
-        drops[x]=1;
+    function initDrops(){
+        columns = canvas.width / fontSize;
+        drops = [];
+        for(let x=0;x<columns;x++)
+            drops[x]=1;
+    }
+    initDrops();
 
     function draw(){
         ctx.fillStyle="rgba(0,0,0,0.05)";
@@ -211,27 +237,8 @@
             drops[i]++;
         }
     }
+
     setInterval(draw,33);
-
-    /* SCAN ANIMATION */
-    function runScan(){
-        let randomScore = Math.floor(Math.random()*100);
-        document.getElementById("score").innerText = randomScore + "%";
-        document.getElementById("progress").style.width = randomScore + "%";
-
-        let level = document.getElementById("riskLevel");
-
-        if(randomScore < 40){
-            level.innerText = "LOW";
-            level.className = "low";
-        }else if(randomScore < 70){
-            level.innerText = "MEDIUM";
-            level.className = "medium";
-        }else{
-            level.innerText = "HIGH";
-            level.className = "high";
-        }
-    }
 </script>
 
 </body>
